@@ -1,0 +1,14 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+    <st:once>
+        <link rel="stylesheet" href="${rootURL}/plugin/tajenkins/css/dashboard-view.css" />
+    </st:once>
+    
+    <f:entry field="name" title="${%Display name}">
+        <f:textbox />
+    </f:entry>
+    <f:advanced>
+        <f:entry title="${%Jobs}">
+            <f:repeatableProperty field="jobList" default="${descriptor.fillJobNameItems}" noAddButton="true"/> 
+        </f:entry>
+    </f:advanced>
+</j:jelly>

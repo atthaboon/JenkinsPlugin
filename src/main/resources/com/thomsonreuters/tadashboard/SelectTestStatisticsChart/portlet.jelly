@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+To change this template, choose Tools | Templates
+and open the template in the editor.
+-->
+
+<?jelly escape-by-default='true'?>
+<!-- TODO add taglibs such as: xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" 
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:i="jelly:fmt">
+</j:jelly>
+-->
+
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:dp="/hudson/plugins/view/dashboard" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+
+  <dp:decorate portlet="${it}"> <!-- This is to say that this is a dashboard view portlet -->
+    <tr><td> <!-- This is needed because everything is formatted as a table - ugly, I know -->
+        
+        <!-- you can include a separate file with the logic to display your data or you can write here directly -->
+        <div align="center">
+            <img id="graph" src="${it.url}summaryGraph/png" lazymap="${it.url}summaryGraph/map" alt="[Test Summary graph]"/>
+        </div>
+     
+     </td></tr>
+  </dp:decorate>
+</j:jelly>
+
