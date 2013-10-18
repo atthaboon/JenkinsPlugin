@@ -28,6 +28,7 @@ import org.jfree.chart.plot.DefaultDrawingSupplier;
 import org.jfree.chart.plot.PiePlot;
 import org.jfree.data.general.DefaultPieDataset;
 import org.kohsuke.stapler.DataBoundConstructor;
+import sun.security.jca.GetInstance;
 
 /**
  *
@@ -42,20 +43,7 @@ public class SelectTestStatisticsChart extends TestStatisticsChart {
         super(name);
         this.jobList = jobList;
     }
-    
-    @Extension // This indicates to Jenkins that this is an implementation of an extension point.
-    public static final class DescriptorImpl extends Descriptor<DashboardPortlet> {
-        
-        @Override
-        public String getDisplayName() {
-            return "Select Test Statistics Chart";
-        }
-        
-        public ArrayList<Checkbox> getFillJobNameItems() {
-            return Utils.getFillJobNameItems();
-        }
-    }
-    
+
     // Override TestStatisticsChart
     @Override
     public Graph getSummaryGraph() {
@@ -119,4 +107,16 @@ public class SelectTestStatisticsChart extends TestStatisticsChart {
         this.jobList = jobList;
     }
     
+    @Extension // This indicates to Jenkins that this is an implementation of an extension point.
+    public static final class DescriptorImpl extends Descriptor<DashboardPortlet> {
+        
+        @Override
+        public String getDisplayName() {
+            return "Select Test Statistics Chart";
+        }
+        
+        public ArrayList<Checkbox> getFillJobNameItems() {
+            return Utils.getFillJobNameItems();
+        }
+    }
 }

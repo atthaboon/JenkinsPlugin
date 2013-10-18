@@ -8,6 +8,7 @@ import com.thomsonreuters.tamodel.Checkbox;
 import com.thomsonreuters.util.Utils;
 import hudson.Extension;
 import hudson.model.Descriptor;
+import hudson.model.Hudson;
 import hudson.model.Job;
 import hudson.model.Run;
 import hudson.model.TopLevelItem;
@@ -159,7 +160,8 @@ public class SelectTestTrendChart extends DashboardPortlet {
       LocalDate today = new LocalDate(System.currentTimeMillis() - dateShift*6000, GregorianChronology.getInstanceUTC());
 
       // for each job, for each day, add last build of the day to summary
-      List<Job> jobs = Utils.getSelectedJobs(getDashboard().getJobs(), this.jobList);
+      //List<Job> jobs = Utils.getSelectedJobs(getDashboard().getJobs(), this.jobList);
+      List<Job> jobs = Utils.getSelectedJobs(this.jobList);
       for (Job job : jobs) {
          Run run = job.getFirstBuild();
 
@@ -317,9 +319,7 @@ public class SelectTestTrendChart extends DashboardPortlet {
    }
    
    @Extension
-   public static DescriptorImpl descriptorImpl;
-   
-   public class DescriptorImpl extends Descriptor<DashboardPortlet> {
+   public static final class DescriptorImpl extends Descriptor<DashboardPortlet> {
 
       @Override
       public String getDisplayName() {
@@ -327,7 +327,7 @@ public class SelectTestTrendChart extends DashboardPortlet {
       }
       
       public ArrayList<Checkbox> getFillJobNameItems() {
-         return Utils.getFillJobNameItems(getDashboard().getJobs());
+         return Utils.getFillJobNameItems();
       }
    }
 }

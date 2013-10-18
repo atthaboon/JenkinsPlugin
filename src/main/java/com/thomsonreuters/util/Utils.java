@@ -6,9 +6,11 @@ package com.thomsonreuters.util;
 
 import com.thomsonreuters.tamodel.Checkbox;
 import hudson.model.Hudson;
+import hudson.model.Item;
 import hudson.model.Job;
 import hudson.model.TopLevelItem;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -17,10 +19,10 @@ import java.util.List;
  * @author u8018728
  */
 public class Utils {
-    public static ArrayList<Checkbox> updateJobList(List<Job> jobsL, ArrayList<Checkbox> jobList)
+    public static ArrayList<Checkbox> updateJobList(ArrayList<Checkbox> jobList)
     {        
         ArrayList<Checkbox> newJobList = new ArrayList<Checkbox>();        
-        for (Job job : jobsL) {
+        for (TopLevelItem job : Hudson.getInstance().getItems()) {
             Checkbox j_checkbox = new Checkbox(job.getName(), false);
             newJobList.add(j_checkbox);
             for (Checkbox jobSelect : jobList) {
@@ -34,9 +36,9 @@ public class Utils {
         return newJobList;
     }
     
-    public static ArrayList<Checkbox> getFillJobNameItems(List<Job> jobsL) {
+    public static ArrayList<Checkbox> getFillJobNameItems() {
         ArrayList<Checkbox> jobList = new ArrayList<Checkbox>();
-        for (Job job : jobsL) {
+        for (TopLevelItem job : Hudson.getInstance().getItems()) {
             Checkbox j_checkbox = new Checkbox(job.getName(), false);
             jobList.add(j_checkbox);
         }
@@ -57,7 +59,11 @@ public class Utils {
         return items;
     }
     
-    public static List<Job> getSelectedJobs(List<Job> jobsL ,ArrayList<Checkbox> jobList){
+    public static List<Job> getSelectedJobs(ArrayList<Checkbox> jobList){
+        List<Job> jobsL = new LinkedList<Job>();
+        for (TopLevelItem item : Hudson.getInstance().getItems()) {
+            jobsL.addAll(item.getAllJobs());
+        }
         List<Job> jobs = new LinkedList<Job>();
         for (Job job : jobsL) {
             for (Checkbox jobSelect : jobList) {
