@@ -1,0 +1,21 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">  
+    <f:entry title="${%Display name}">
+        <f:textbox name="portlet.name" field="name" default="${descriptor.getDisplayName()}" />
+    </f:entry>
+    <f:optionalBlock name="useBackgroundColors" title="${%Background Colors}" checked="${portlet.isUseBackgroundColors()}" inline="true">
+        <f:entry title="${%Success Color} (${%in hex})">
+            <f:textbox name="successColor" field="successColor" default="71E66D" />
+        </f:entry>
+        <f:entry title="${%Failure Color} (${%in hex})">
+            <f:textbox name="failureColor" field="failureColor" default="E86850" />
+        </f:entry>
+        <f:entry title="${%Skipped Color} (${%in hex})">
+            <f:textbox name="skippedColor" field="skippedColor" default="FDB813" />
+        </f:entry>
+    </f:optionalBlock>
+    <f:advanced>
+        <f:entry title="${%Jobs}">
+            <f:repeatableProperty field="jobList" default="${descriptor.getFillJobNameItems()}" noAddButton="true"/> 
+        </f:entry>
+    </f:advanced>
+</j:jelly>

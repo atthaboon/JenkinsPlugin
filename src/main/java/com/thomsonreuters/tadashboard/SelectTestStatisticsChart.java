@@ -5,9 +5,9 @@
 package com.thomsonreuters.tadashboard;
 
 import com.thomsonreuters.tamodel.Checkbox;
+import com.thomsonreuters.util.Utils;
 import hudson.Extension;
 import hudson.model.Descriptor;
-import hudson.model.Hudson;
 import hudson.model.TopLevelItem;
 import hudson.plugins.view.dashboard.DashboardPortlet;
 import hudson.plugins.view.dashboard.Messages;
@@ -20,7 +20,6 @@ import java.awt.Color;
 import java.awt.Paint;
 import java.text.NumberFormat;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
@@ -53,46 +52,15 @@ public class SelectTestStatisticsChart extends TestStatisticsChart {
         }
         
         public ArrayList<Checkbox> getFillJobNameItems() {
-            ArrayList<Checkbox> jobList = new ArrayList<Checkbox>();
-            for (TopLevelItem project : Hudson.getInstance().getItems()) {
-                Checkbox job = new Checkbox(project.getName(), false);
-                jobList.add(job);
-            }
-            return jobList;
+            return Utils.getFillJobNameItems();
         }
-    }
-    
-    private ArrayList<Checkbox> updateJobList(ArrayList<Checkbox> jobList)
-    {        
-        ArrayList<Checkbox> newJobList = new ArrayList<Checkbox>();        
-        for (TopLevelItem project : Hudson.getInstance().getItems()) {
-            Checkbox job = new Checkbox(project.getName(), false);
-            newJobList.add(job);
-            for (Checkbox jobSelect : jobList) {
-                if(job.getName().equals(jobSelect.getName()))
-                {
-                    job.setSelect(jobSelect.isSelected());
-                    break;
-                }
-            }
-        }
-        return newJobList;
     }
     
     // Override TestStatisticsChart
     @Override
     public Graph getSummaryGraph() {
         
-        List<TopLevelItem> items = new LinkedList<TopLevelItem>();
-        for (TopLevelItem item : Hudson.getInstance().getItems()) {
-            for (Checkbox jobSelect : jobList) {
-                if(item.getName().equals(jobSelect.getName()) && jobSelect.isSelected())
-                {
-                    items.add(item);
-                    break;
-                }
-            }
-        }
+        List<TopLevelItem> items = Utils.getSelectedItems(this.jobList);
         final TestResultSummary summary = TestUtil.getTestResultSummary(items);
         return new Graph(-1, 300, 220) {
 
@@ -143,7 +111,7 @@ public class SelectTestStatisticsChart extends TestStatisticsChart {
     }
     
     public ArrayList<Checkbox> getJobList() {
-        this.jobList = updateJobList(jobList); // Force update job list first for support new job.
+        this.jobList = Utils.updateJobList(jobList); // Force update job list first for support new job.
         return jobList;
     }
 
