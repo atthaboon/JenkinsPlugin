@@ -95,7 +95,7 @@ B.medium { color:orange;}
 <j:set var="junitResultList" value="${it.JUnitTestResult}" />
 <j:if test="${junitResultList.isEmpty()!=true}">
   <TABLE width="100%">
-    <TR><TD class="bg1" colspan="2"><B>JUnit Tests</B></TD></TR>
+    <TR><TD class="bg1" colspan="2"><B>Unit Tests</B></TD></TR>
     <j:forEach var="junitResult" items="${it.JUnitTestResult}">
       <j:forEach var="packageResult" items="${junitResult.getChildren()}">
         <TR><TD class="bg2" colspan="2"> Name: ${packageResult.getName()} Failed: ${packageResult.getFailCount()} test(s), Passed: ${packageResult.getPassCount()} test(s), Skipped: ${packageResult.getSkipCount()} test(s), Total: ${packageResult.getPassCount()+packageResult.getFailCount()+packageResult.getSkipCount()} test(s)</TD></TR>
