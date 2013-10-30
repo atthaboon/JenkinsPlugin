@@ -1,0 +1,117 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define">
+
+<STYLE>
+BODY, TABLE, TD, TH, P {
+  font-family:Verdana,Helvetica,sans serif;
+  font-size:11px;
+  color:black;
+}
+h1 { color:black; }
+h2 { color:black; }
+h3 { color:black; }
+TD.bg1 { color:#f87f00; background-color:#000000; font-size:14px; line-height: 30px; padding-left: 5px; }
+TD.bg2 { color:#f87f00; background-color:#2E2E2E; font-size:12px; line-height: 26px; padding-left: 5px; }
+TD.bg3 { color:#f87f00; background-color:#2E2E2E; font-size:10px; line-height: 22px; padding-left: 5px; }
+TD.test_passed { color:blue; }
+TD.test_failed { color:red; }
+TD.console { font-family:Courier New; }
+B {font-weight: bold;}
+B.critical { color:red;}
+B.medium { color:orange;}
+</STYLE>
+<BODY>
+<j:set var="spc" value="&amp;nbsp;&amp;nbsp;" />
+
+
+<!-- GENERAL INFO -->
+<TABLE>
+  <TR><TD align="right">
+    <j:choose>
+      <j:when test="${build.result=='SUCCESS'}">
+        <IMG SRC="${rooturl}static/e59dfe28/images/32x32/blue.gif" />
+      </j:when>
+	  <j:when test="${build.result=='FAILURE'}">
+        <IMG SRC="${rooturl}static/e59dfe28/images/32x32/red.gif" />
+      </j:when>
+      <j:otherwise>
+        <IMG SRC="${rooturl}static/e59dfe28/images/32x32/yellow.gif" />
+      </j:otherwise>
+    </j:choose>
+  </TD><TD valign="center"><B style="font-size: 200%;">BUILD ${build.result}</B></TD></TR>
+  <TR><TD>Build URL</TD><TD><A href="${rooturl}${build.url}">${rooturl}${build.url}</A></TD></TR>
+  <TR><TD>Project:</TD><TD>${project.name}</TD></TR>
+  <TR><TD>Date of build:</TD><TD>${it.timestampString}</TD></TR>
+  <TR><TD>Build duration:</TD><TD>${build.durationString}</TD></TR>
+</TABLE>
+<BR/>
+
+<!-- ARTIFACTS -->
+<j:set var="artifacts" value="${build.artifacts}" />
+<j:if test="${artifacts!=null and artifacts.size()&gt;0}">
+  <TABLE width="100%">
+    <TR><TD class="bg1"><B>BUILD ARTIFACTS</B></TD></TR>
+    <TR>
+      <TD>
+        <j:forEach var="f" items="${artifacts}">
+      	  <li>
+      	    <a href="${rooturl}${build.url}artifact/${f}">${f}</a>
+      	  </li>
+      	</j:forEach>
+      </TD>
+    </TR>
+  </TABLE>
+<BR/>  
+</j:if>
+
+
+<!-- MAVEN ARTIFACTS -->
+<j:set var="mbuilds" value="${build.moduleBuilds}" />
+<j:if test="${mbuilds!=null}">
+  <TABLE width="100%">
+      <TR><TD class="bg1"><B>BUILD ARTIFACTS</B></TD></TR>
+      <j:forEach var="m" items="${mbuilds}">
+        <TR><TD class="bg2"><B>${m.key.displayName}</B></TD></TR>
+        <j:forEach var="mvnbld" items="${m.value}">
+        <j:set var="artifacts" value="${mvnbld.artifacts}" />
+        <j:if test="${artifacts!=null and artifacts.size()&gt;0}">
+      <TR>
+        <TD>
+      	  <j:forEach var="f" items="${artifacts}">
+      	    <li>
+      	      <a href="${rooturl}${mvnbld.url}artifact/${f}">${f}</a>
+      	    </li>
+      	  </j:forEach>
+      	</TD>
+      </TR>
+        </j:if>
+        </j:forEach>
+      </j:forEach>
+  </TABLE>
+<BR/>  
+</j:if>
+
+<!-- Klocwork TEMPLATE -->
+<j:set var="klocworkAction" value="${it.getAction('com.thalesgroup.hudson.plugins.klocwork.KloBuildAction')}" />
+<j:if test="${klocworkAction!=null}">
+    <j:set var="kloResult" value="${klocworkAction.getResult()}" />    
+    <j:set var="kloReport" value="${kloResult.getReport()}" />
+    <TABLE width="100%">
+        <TR><TD class="bg1"><B>KLOCWORK RESULT</B></TD></TR>
+        <TR><TD>Total: <A href="${rooturl}${build.url}kloResult">${kloReport.getNumberTotal()} errors</A>.</TD></TR>
+        <TR>
+            <TD>
+                Issues Severity
+            </TD>
+        </TR>
+        <TR>
+            <TD>
+                <LI>Critical errors: <B class="critical">${kloReport.getNumberLowSeverities()}</B></LI>
+                <LI>Warnings and Suggestions: <B class="medium">${kloReport.getNumberHighSeverities()}</B></LI>
+            </TD>
+        </TR>
+    </TABLE>
+    <BR/>
+</j:if>
+
+</BODY>
+</j:jelly>
