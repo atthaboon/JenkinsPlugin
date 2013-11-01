@@ -13,6 +13,7 @@ BODY, TABLE, TD, TH, P {
 h1 { color:black; }
 h2 { color:black; }
 h3 { color:black; }
+TH {text-align: left;}
 TD.header { color:#f87f00; background-color:#000000; font-size:28px; line-height: 38px; padding-left: 5px; }
 TD.bg1 { color:#f87f00; background-color:#000000; font-size:14px; line-height: 30px; padding-left: 5px; }
 TD.bg2 { color:#f87f00; background-color:#2E2E2E; font-size:12px; line-height: 26px; padding-left: 5px; }
@@ -58,6 +59,12 @@ B.medium { color:orange;}
     <TR>
         <TD class="header" colspan="3"><B>SUMMARY</B></TD>
     </TR>
+	<TR>
+		<TH width="100px;">Build Status</TH>
+		<TH width="220px;">Job Name</TH>
+		<TH>Duration</TH>
+	</TR>
+	
     <% 	builds_cause.each() { bc -> 
         upstreamBuild = hudson.model.Hudson.instance.getItem(bc.upstreamProject).getBuildByNumber(bc.upstreamBuild)
         def status_icon = 'yellow.gif'
@@ -69,8 +76,8 @@ B.medium { color:orange;}
         }
     %>
         <TR>
-            <TD width="100px;"><IMG SRC="http://192.168.48.24:8081/static/67c1c51b/images/16x16/<%= status_icon%>" /> <%= upstreamBuild.result%></TD>
-            <TD width="200px;"><A href="${rooturl}${upstreamBuild.url}"><%= bc.upstreamProject%></A></TD>
+            <TD><IMG SRC="http://192.168.48.24:8081/static/67c1c51b/images/16x16/<%= status_icon%>" /> <%= upstreamBuild.result%></TD>
+            <TD><A href="${rooturl}${upstreamBuild.url}"><%= bc.upstreamProject%></A></TD>
             <TD><%= upstreamBuild.getDurationString()%></TD>
         </TR>
     <% } %>
@@ -89,10 +96,10 @@ B.medium { color:orange;}
             if(artifacts != null && artifacts.size() > 0) {
             hadChanges = true
             artifacts.each() { f -> %>
-                <li>
+				<li style="margin-left: 20px;">
                     <a href="${rooturl}${upstreamBuild.url}artifact/${f}">${f}</a>
                 </li>
-<%		
+<%				
             }
             }  
         }
@@ -132,6 +139,96 @@ if (junitResultList.size() > 0) { %>
         <TR><TD colspan="2">No Results</TD></TR>
     <%	} %>
 </TABLE>
+<BR/><BR/>
+
+<!-- Code Coverage - COBERTURA TEMPLATE -->
+<table width="100%"><TD class="bg1" colspan="2"><B>Cobertura Report</B></TD></table>
+<table width="100%"><TD class="bg2" colspan="2"><B>Project Coverage Summary</B></TD></table>
+<% 	hadChanges = false
+    builds_cause.each() { bc -> 
+    upstreamBuild = hudson.model.Hudson.instance.getItem(bc.upstreamProject).getBuildByNumber(bc.upstreamBuild)
+    def scriptContent = new hudson.plugins.emailext.plugins.content.ScriptContentBuildWrapper(upstreamBuild)
+    def coberturaAction = scriptContent.coberturaAction
+	if (coberturaAction!=null) {
+		def coberturaResult = coberturaAction.result
+		if (coberturaResult!=null) {
+        hadChanges = true
+	%>
+			<table border="1px" class="pane">
+                <tr>
+                    <td>Name</td>
+                </tr>
+                <tr>
+                    <td>${coberturaResult.name}</td>
+					<% coberturaResult.metrics.each() { metric -> %>
+						<td data="${coberturaResult.getCoverage(metric).percentageFloat}">${coberturaResult.getCoverage(metric).percentage}%
+                            (${coberturaResult.getCoverage(metric)})
+                        </td>
+					<% } %>
+                </tr>
+            </table>
+			<% if (coberturaResult.sourceCodeLevel) { %>
+				<h2>Source</h2>
+				<% if(coberturaResult.sourceFileAvailable) { %>
+					<div style="overflow-x:scroll;">
+						<table class="source">
+							<thead>
+								<tr>
+									<th colspan="3">${coberturaResult.relativeSourcePath}</th>
+								</tr>
+							</thead>
+							${coberturaResult.sourceFileContent}
+						</table>
+					</div>
+				<% } %>
+				<% if(coberturaResult.sourceFileAvailable == false) { %>
+					<p>
+						<i>Source code is unavailable</i>
+					</p>
+				<% } %>
+			<% } %>
+			
+			<% coberturaResult.childElements.each() { element -> 
+				childMetrics = coberturaResult.getChildMetrics(element)
+			%>
+				<table width="100%"><TD class="bg2" colspan="2">Coverage Breakdown by ${element.displayName}</TD></table>
+                <table border="1px" class="pane sortable">
+                    <tr>
+                        <td>Name</td>
+						<% childMetrics.each() { metric ->  %>
+							<td>${metric.name}</td>
+						<% } %>
+                    </tr>
+					<% coberturaResult.children.each() { c -> 
+						def child = coberturaResult.getChild(c)
+					%>
+						<tr>
+                            <td>
+                                ${child.xmlTransform(child.name)}
+                            </td>
+							<% childMetrics.each() { metric -> 
+								def childResult = child.getCoverage(metric)
+							%>
+								<% if (childResult!=null) { %>
+									<td data="${childResult.percentageFloat}">${childResult.percentage}%
+										(${childResult})
+									</td>
+								<% } %>
+								<% if (childResult==null) { %>
+									<td data="101">N/A</td>
+								<% } %>
+							<% } %>
+                        </tr>
+					<% } %>
+				</table>
+			<% } %>
+<%
+		}
+	} 
+} %>
+<%if(!hadChanges) { %>	
+    No Results
+<%	} %>
 <BR/><BR/>
 
 <!-- Static code analysis -->
@@ -195,146 +292,6 @@ if (junitResultList.size() > 0) { %>
     <%	} %>
 </TABLE>
 <BR/><BR/>
-
-<!-- CONSOLE OUTPUT 
-<% if(build.result==hudson.model.Result.FAILURE) { %>
-<TABLE width="100%" cellpadding="0" cellspacing="0">
-<TR><TD class="bg1"><B>CONSOLE OUTPUT</B></TD></TR>
-<% 	build.getLog(100).each() { line -> %>
-	<TR><TD class="console">${org.apache.commons.lang.StringEscapeUtils.escapeHtml(line)}</TD></TR>
-<% 	} %>
-</TABLE>
-<BR/>
-<% } %>
--->
-
-<!--
-<% builds_cause.each() { bc -> 
-    upstreamBuild = hudson.model.Hudson.instance.getItem(bc.upstreamProject).getBuildByNumber(bc.upstreamBuild)
-    
-    def scriptContent = new hudson.plugins.emailext.plugins.content.ScriptContentBuildWrapper(upstreamBuild)
-%>	
-    <%= upstreamBuild.getClass()%><BR/>
-    <%= scriptContent.getTimestampString()%><BR/>
-    
-<% } %>
--->
     
     
-<!--
-<% builds_cause.each() { bc -> 
-    upstreamBuild = hudson.model.Hudson.instance.getItem(bc.upstreamProject).getBuildByNumber(bc.upstreamBuild)
-    %>	  
-    <%= upstreamBuild%>, <%= bc.upstreamProject%>, <%= bc.upstreamBuild%>
-    <TABLE>
-        <TR>
-            <TD align="right"></TD>
-            <TD valign="center"><B style="font-size: 200%;">BUILD <%= upstreamBuild.result%></B></TD>
-        </TR>
-    </TABLE>
-    <BR/>
-    
-    
-<% } %>
-
-
-<TABLE>
-  <TR><TD align="right"><IMG SRC="${rooturl}static/e59dfe28/images/32x32/<%= build.result.toString() == 'SUCCESS' ? "blue.gif" : build.result.toString() == 'FAILURE' ? 'red.gif' : 'yellow.gif' %>" />
-  </TD><TD valign="center"><B style="font-size: 200%;">BUILD ${build.result}</B></TD></TR>
-  <TR><TD>Build URL</TD><TD><A href="${rooturl}${build.url}">${rooturl}${build.url}</A></TD></TR>
-  <TR><TD>Project:</TD><TD>${project.name}</TD></TR>
-  <TR><TD>Date of build:</TD><TD>${it.timestampString}</TD></TR>
-  <TR><TD>Build duration:</TD><TD>${build.durationString}</TD></TR>
-</TABLE>
-<BR/>
--->
-
-<!-- ARTIFACTS 
-<% def artifacts = build.artifacts
-if(artifacts != null && artifacts.size() > 0) { %>
-  <TABLE width="100%">
-    <TR><TD class="bg1"><B>BUILD ARTIFACTS</B></TD></TR>
-    <TR>
-      <TD>
-<% 		artifacts.each() { f -> %>		
-      	  <li>
-      	    <a href="${rooturl}${build.url}artifact/${f}">${f}</a>
-      	  </li>
-<%		} %>
-      </TD>
-    </TR>
-  </TABLE>
-<BR/>  
-<% } %>
--->
-
-<!-- MAVEN ARTIFACTS 
-<% 
-try {
-  def mbuilds = build.moduleBuilds
-  if(mbuilds != null) { %>
-  <TABLE width="100%">
-      <TR><TD class="bg1"><B>BUILD ARTIFACTS</B></TD></TR>
-<% 
-    try {  
-        mbuild.each() { m -> %>	  
-        <TR><TD class="bg2"><B>${m.key.displayName}</B></TD></TR>
-<%		m.value.each() { mvnbld ->
-			def artifactz = mvnbld.artifacts
-			if(artifactz != null && artifactz.size() > 0) { %>			
-      <TR>
-        <TD>
-<%				artifactz.each() { f -> %>			
-      	    <li>
-      	      <a href="${rooturl}${mvnbld.url}artifact/${f}">${f}</a>
-      	    </li>
-<%				} %>		
-      	</TD>
-      </TR>
-<%			} 
-		}
-       }
-    } catch(e) {
-	// we don't do anything
-    }  %>      
-  </TABLE>
-<BR/>
-<% } 
-
-}catch(e) {
-	// we don't do anything
-}
-%>
--->
-
-<!-- JUnit TEMPLATE 
-<% def junitResultList = it.JUnitTestResult
-if (junitResultList.size() > 0) { %>
-  <TABLE width="100%">
-    <TR><TD class="bg1" colspan="2"><B>JUnit Tests</B></TD></TR>
-    <% it.JUnitTestResult.each{ junitResult ->
-      junitResult.getChildren().each { packageResult -> %>
-        <TR><TD class="bg2" colspan="2"> Name: ${packageResult.getName()} Failed: ${packageResult.getFailCount()} test(s), Passed: ${packageResult.getPassCount()} test(s), Skipped: ${packageResult.getSkipCount()} test(s), Total: ${packageResult.getPassCount()+packageResult.getFailCount()+packageResult.getSkipCount()} test(s)</TD></TR>
-        <% packageResult.getFailedTests().each{ failed_test -> %>
-          <TR bgcolor="white"><TD class="test_failed" colspan="2"><B><li>Failed: ${failed_test.getFullName()} </li></B></TD></TR>
-        <% }
-      }
-    }
-} %>
-  </TABLE>
-<BR/>
--->
-
-<!-- CONSOLE OUTPUT 
-<% if(build.result==hudson.model.Result.FAILURE) { %>
-<TABLE width="100%" cellpadding="0" cellspacing="0">
-<TR><TD class="bg1"><B>CONSOLE OUTPUT</B></TD></TR>
-<% 	build.getLog(100).each() { line -> %>
-	<TR><TD class="console">${org.apache.commons.lang.StringEscapeUtils.escapeHtml(line)}</TD></TR>
-<% 	} %>
-</TABLE>
-<BR/>
-<% } %>
--->
-
 </BODY>
