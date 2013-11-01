@@ -143,7 +143,7 @@ if (junitResultList.size() > 0) { %>
 <BR/><BR/>
 
 <!-- Code Coverage - COBERTURA TEMPLATE -->
-<table width="100%"><TD class="bg1" colspan="2"><B>Cobertura Report</B></TD></table>
+<table width="100%"><TD class="bg1" colspan="2"><B>Code Coverage Report</B></TD></table>
 <table width="100%"><TD class="bg2" colspan="2"><B>Project Coverage Summary</B></TD></table>
 <% 	hadChanges = false
     builds_cause.each() { bc -> 
@@ -158,6 +158,9 @@ if (junitResultList.size() > 0) { %>
 			<table border="1px" class="pane">
                 <tr>
                     <td>Name</td>
+                    <% coberturaResult.metrics.each() { metric -> %>
+						<td>${metric.name}</td>
+					<% } %>
                 </tr>
                 <tr>
                     <td>${coberturaResult.name}</td>
