@@ -2,6 +2,7 @@
 import hudson.model.*
 import hudson.plugins.emailext.*
 import jenkins.model.*
+import com.thalesgroup.hudson.plugins.klocwork.*
 %>
 
 <STYLE>
@@ -242,7 +243,7 @@ if (junitResultList.size() > 0) { %>
     %>
         <% if (klocworkAction!=null) {
             def kloResult = klocworkAction.getResult()
-            def kloReport = klocworkAction.getReport()
+            def kloReport = kloResult.getReport()
             hadChanges = true
         %>
             <TR><TD>Total: <A href="${rooturl}${upstreamBuild.url}kloResult">${kloReport.getNumberTotal()} errors</A>.</TD></TR>
