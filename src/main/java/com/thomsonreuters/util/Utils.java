@@ -20,7 +20,7 @@ import java.util.List;
  */
 public class Utils {
     public static ArrayList<Checkbox> updateJobList(ArrayList<Checkbox> jobList)
-    {        
+    {   
         ArrayList<Checkbox> newJobList = new ArrayList<Checkbox>();        
         for (TopLevelItem job : Hudson.getInstance().getItems()) {
             Checkbox j_checkbox = new Checkbox(job.getName(), false);

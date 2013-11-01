@@ -1,0 +1,340 @@
+<% 
+import hudson.model.*
+import hudson.plugins.emailext.*
+import jenkins.model.*
+%>
+
+<STYLE>
+BODY, TABLE, TD, TH, P {
+  font-family:Verdana,Helvetica,sans serif;
+  font-size:11px;
+  color:black;
+}
+h1 { color:black; }
+h2 { color:black; }
+h3 { color:black; }
+TD.header { color:#f87f00; background-color:#000000; font-size:28px; line-height: 38px; padding-left: 5px; }
+TD.bg1 { color:#f87f00; background-color:#000000; font-size:14px; line-height: 30px; padding-left: 5px; }
+TD.bg2 { color:#f87f00; background-color:#2E2E2E; font-size:12px; line-height: 26px; padding-left: 5px; }
+TD.bg3 { color:#f87f00; background-color:#2E2E2E; font-size:10px; line-height: 22px; padding-left: 5px; }
+TD.test_passed { color:blue; }
+TD.test_failed { color:red; }
+TD.console { font-family:Courier New; }
+B {font-weight: bold;}
+B.critical { color:red;}
+B.medium { color:orange;}
+</STYLE>
+<BODY>
+<% 
+	def spc = "&nbsp;&nbsp;" 
+    def ballColor = 'blue'
+    
+    // Globla var
+    def hadChanges = false
+    
+	// The goal is to find the bottom level job which should contain the changelist
+    def upstreamBuild = null
+    def cause = build.causes.find {
+        if(it instanceof hudson.model.Cause.UpstreamCause) {
+            return true 
+        }
+        return false
+    }
+    
+    def tmp_builds = []
+    while(cause != null) {
+        tmp_builds.add(cause)
+        upstreamBuild = hudson.model.Hudson.instance.getItem(cause.upstreamProject).getBuildByNumber(cause.upstreamBuild)
+        cause = upstreamBuild.causes.find {
+            return (it instanceof hudson.model.Cause.UpstreamCause);
+        }
+    }	
+    def builds_cause = []
+    tmp_builds.reverseEach { builds_cause << it }
+%>
+
+<!-- Summary -->
+<TABLE width="100%">
+    <TR>
+        <TD class="header" colspan="3"><B>SUMMARY</B></TD>
+    </TR>
+    <% 	builds_cause.each() { bc -> 
+        upstreamBuild = hudson.model.Hudson.instance.getItem(bc.upstreamProject).getBuildByNumber(bc.upstreamBuild)
+        def status_icon = 'yellow.gif'
+        if(upstreamBuild.result.toString() == 'SUCCESS') {
+            status_icon = 'blue.gif'
+        }
+        else if(upstreamBuild.result.toString() =='FAILURE') {
+            status_icon = 'red.gif'
+        }
+    %>
+        <TR>
+            <TD width="100px;"><IMG SRC="http://192.168.48.24:8081/static/67c1c51b/images/16x16/<%= status_icon%>" /> <%= upstreamBuild.result%></TD>
+            <TD width="200px;"><A href="${rooturl}${upstreamBuild.url}"><%= bc.upstreamProject%></A></TD>
+            <TD><%= upstreamBuild.getDurationString()%></TD>
+        </TR>
+    <% } %>
+</TABLE>
+<BR/><BR/>
+
+<!-- Build Artifacts -->
+<TABLE width="100%">
+    <TR><TD class="bg1"><B>BUILD ARTIFACTS</B></TD></TR>
+    <TR>
+      <TD>
+<% 		hadChanges = false
+        builds_cause.each() { bc -> 
+            upstreamBuild = hudson.model.Hudson.instance.getItem(bc.upstreamProject).getBuildByNumber(bc.upstreamBuild)
+            def artifacts = upstreamBuild.artifacts
+            if(artifacts != null && artifacts.size() > 0) {
+            hadChanges = true
+            artifacts.each() { f -> %>
+                <li>
+                    <a href="${rooturl}${upstreamBuild.url}artifact/${f}">${f}</a>
+                </li>
+<%		
+            }
+            }  
+        }
+%>
+        </TD>
+    </TR>
+    <%if(!hadChanges) { %>	
+        <TR><TD colspan="2">No Artifacts</TD></TR>
+    <%	} %>
+</TABLE>
+<BR/><BR/>
+
+<!-- Unit Tests -->
+<TABLE width="100%">
+    <TR><TD class="bg1" colspan="2"><B>UNIT TESTS</B></TD></TR>
+<!-- JUnit TEMPLATE -->
+<% 	hadChanges = false
+    builds_cause.each() { bc -> 
+    upstreamBuild = hudson.model.Hudson.instance.getItem(bc.upstreamProject).getBuildByNumber(bc.upstreamBuild)
+    def scriptContent = new hudson.plugins.emailext.plugins.content.ScriptContentBuildWrapper(upstreamBuild)
+    def junitResultList = scriptContent.JUnitTestResult
+if (junitResultList.size() > 0) { %>
+<%  hadChanges = true 
+    scriptContent.JUnitTestResult.each{ junitResult ->
+    junitResult.getChildren().each { packageResult -> %>
+        <TR><TD class="bg2" colspan="2"> Name: ${packageResult.getName()} Failed: ${packageResult.getFailCount()} test(s), Passed: ${packageResult.getPassCount()} test(s), Skipped: ${packageResult.getSkipCount()} test(s), Total: ${packageResult.getPassCount()+packageResult.getFailCount()+packageResult.getSkipCount()} test(s)</TD></TR>
+        <% packageResult.getFailedTests().each{ failed_test -> %>
+          <TR bgcolor="white"><TD class="test_failed" colspan="2"><B><li>Failed: ${failed_test.getFullName()} </li></B></TD></TR>
+        <% }
+      }
+    } %>
+    
+<%      } 
+    }
+%>
+    <%if(!hadChanges) { %>	
+        <TR><TD colspan="2">No Results</TD></TR>
+    <%	} %>
+</TABLE>
+<BR/><BR/>
+
+<!-- Static code analysis -->
+<TABLE width="100%">
+    <TR><TD class="bg1" colspan="2"><B>STATIC CODE ANALYSIS</B></TD></TR>
+    <% 	hadChanges = false
+    builds_cause.each() { bc -> 
+    upstreamBuild = hudson.model.Hudson.instance.getItem(bc.upstreamProject).getBuildByNumber(bc.upstreamBuild)
+    def scriptContent = new hudson.plugins.emailext.plugins.content.ScriptContentBuildWrapper(upstreamBuild)
+    def klocworkAction = scriptContent.getAction('com.thalesgroup.hudson.plugins.klocwork.KloBuildAction')
+    %>
+        <% if (klocworkAction!=null) {
+            def kloResult = klocworkAction.getResult()
+            def kloReport = klocworkAction.getReport()
+            hadChanges = true
+        %>
+            <TR><TD>Total: <A href="${rooturl}${upstreamBuild.url}kloResult">${kloReport.getNumberTotal()} errors</A>.</TD></TR>
+            <TR><TD>Issues Severity</TD></TR>
+            <TR>
+                <TD>
+                    <LI>Critical errors: <B class="critical">${kloReport.getNumberLowSeverities()}</B></LI>
+                    <LI>Warnings and Suggestions: <B class="medium">${kloReport.getNumberHighSeverities()}</B></LI>
+                </TD>
+            </TR>
+        <% } %>
+    <% } %>
+    <%if(!hadChanges) { %>	
+        <TR><TD colspan="2">No Results</TD></TR>
+    <%	} %>
+</TABLE>
+<BR/><BR/>
+
+<!-- SVN Changes -->
+<TABLE width="100%">
+    <TR><TD class="bg1" colspan="2"><B>CHANGES</B></TD></TR>
+    <%  hadChanges = false
+        bc = builds_cause[0]
+        upstreamBuild = hudson.model.Hudson.instance.getItem(bc.upstreamProject).getBuildByNumber(bc.upstreamBuild)
+        def changeSet = upstreamBuild.changeSet
+        if(changeSet != null) {
+            changeSet.each() { cs -> hadChanges = true %>
+                <TR>
+                    <TD colspan="2" class="bg2">&nbsp;&nbsp;Revision <B><%= cs.metaClass.hasProperty('commitId') ? cs.commitId : cs.metaClass.hasProperty('revision') ? cs.revision : 
+                    cs.metaClass.hasProperty('changeNumber') ? cs.changeNumber : "" %></B> by
+                        <B><%= cs.author %>: </B>
+                        <B>(${cs.msgAnnotated})</B>
+                    </TD>
+                </TR>
+                <%		cs.affectedFiles.each() { p -> %>
+                <TR>
+                  <TD width="10%">&nbsp;&nbsp;${p.editType.name}</TD>
+                  <TD>${p.path}</TD>
+                </TR>
+            <% }  
+            }
+        }
+        
+     %>
+    <%if(!hadChanges) { %>	
+        <TR><TD colspan="2">No Changes</TD></TR>
+    <%	} %>
+</TABLE>
+<BR/><BR/>
+
+<!-- CONSOLE OUTPUT 
+<% if(build.result==hudson.model.Result.FAILURE) { %>
+<TABLE width="100%" cellpadding="0" cellspacing="0">
+<TR><TD class="bg1"><B>CONSOLE OUTPUT</B></TD></TR>
+<% 	build.getLog(100).each() { line -> %>
+	<TR><TD class="console">${org.apache.commons.lang.StringEscapeUtils.escapeHtml(line)}</TD></TR>
+<% 	} %>
+</TABLE>
+<BR/>
+<% } %>
+-->
+
+<!--
+<% builds_cause.each() { bc -> 
+    upstreamBuild = hudson.model.Hudson.instance.getItem(bc.upstreamProject).getBuildByNumber(bc.upstreamBuild)
+    
+    def scriptContent = new hudson.plugins.emailext.plugins.content.ScriptContentBuildWrapper(upstreamBuild)
+%>	
+    <%= upstreamBuild.getClass()%><BR/>
+    <%= scriptContent.getTimestampString()%><BR/>
+    
+<% } %>
+-->
+    
+    
+<!--
+<% builds_cause.each() { bc -> 
+    upstreamBuild = hudson.model.Hudson.instance.getItem(bc.upstreamProject).getBuildByNumber(bc.upstreamBuild)
+    %>	  
+    <%= upstreamBuild%>, <%= bc.upstreamProject%>, <%= bc.upstreamBuild%>
+    <TABLE>
+        <TR>
+            <TD align="right"></TD>
+            <TD valign="center"><B style="font-size: 200%;">BUILD <%= upstreamBuild.result%></B></TD>
+        </TR>
+    </TABLE>
+    <BR/>
+    
+    
+<% } %>
+
+
+<TABLE>
+  <TR><TD align="right"><IMG SRC="${rooturl}static/e59dfe28/images/32x32/<%= build.result.toString() == 'SUCCESS' ? "blue.gif" : build.result.toString() == 'FAILURE' ? 'red.gif' : 'yellow.gif' %>" />
+  </TD><TD valign="center"><B style="font-size: 200%;">BUILD ${build.result}</B></TD></TR>
+  <TR><TD>Build URL</TD><TD><A href="${rooturl}${build.url}">${rooturl}${build.url}</A></TD></TR>
+  <TR><TD>Project:</TD><TD>${project.name}</TD></TR>
+  <TR><TD>Date of build:</TD><TD>${it.timestampString}</TD></TR>
+  <TR><TD>Build duration:</TD><TD>${build.durationString}</TD></TR>
+</TABLE>
+<BR/>
+-->
+
+<!-- ARTIFACTS 
+<% def artifacts = build.artifacts
+if(artifacts != null && artifacts.size() > 0) { %>
+  <TABLE width="100%">
+    <TR><TD class="bg1"><B>BUILD ARTIFACTS</B></TD></TR>
+    <TR>
+      <TD>
+<% 		artifacts.each() { f -> %>		
+      	  <li>
+      	    <a href="${rooturl}${build.url}artifact/${f}">${f}</a>
+      	  </li>
+<%		} %>
+      </TD>
+    </TR>
+  </TABLE>
+<BR/>  
+<% } %>
+-->
+
+<!-- MAVEN ARTIFACTS 
+<% 
+try {
+  def mbuilds = build.moduleBuilds
+  if(mbuilds != null) { %>
+  <TABLE width="100%">
+      <TR><TD class="bg1"><B>BUILD ARTIFACTS</B></TD></TR>
+<% 
+    try {  
+        mbuild.each() { m -> %>	  
+        <TR><TD class="bg2"><B>${m.key.displayName}</B></TD></TR>
+<%		m.value.each() { mvnbld ->
+			def artifactz = mvnbld.artifacts
+			if(artifactz != null && artifactz.size() > 0) { %>			
+      <TR>
+        <TD>
+<%				artifactz.each() { f -> %>			
+      	    <li>
+      	      <a href="${rooturl}${mvnbld.url}artifact/${f}">${f}</a>
+      	    </li>
+<%				} %>		
+      	</TD>
+      </TR>
+<%			} 
+		}
+       }
+    } catch(e) {
+	// we don't do anything
+    }  %>      
+  </TABLE>
+<BR/>
+<% } 
+
+}catch(e) {
+	// we don't do anything
+}
+%>
+-->
+
+<!-- JUnit TEMPLATE 
+<% def junitResultList = it.JUnitTestResult
+if (junitResultList.size() > 0) { %>
+  <TABLE width="100%">
+    <TR><TD class="bg1" colspan="2"><B>JUnit Tests</B></TD></TR>
+    <% it.JUnitTestResult.each{ junitResult ->
+      junitResult.getChildren().each { packageResult -> %>
+        <TR><TD class="bg2" colspan="2"> Name: ${packageResult.getName()} Failed: ${packageResult.getFailCount()} test(s), Passed: ${packageResult.getPassCount()} test(s), Skipped: ${packageResult.getSkipCount()} test(s), Total: ${packageResult.getPassCount()+packageResult.getFailCount()+packageResult.getSkipCount()} test(s)</TD></TR>
+        <% packageResult.getFailedTests().each{ failed_test -> %>
+          <TR bgcolor="white"><TD class="test_failed" colspan="2"><B><li>Failed: ${failed_test.getFullName()} </li></B></TD></TR>
+        <% }
+      }
+    }
+} %>
+  </TABLE>
+<BR/>
+-->
+
+<!-- CONSOLE OUTPUT 
+<% if(build.result==hudson.model.Result.FAILURE) { %>
+<TABLE width="100%" cellpadding="0" cellspacing="0">
+<TR><TD class="bg1"><B>CONSOLE OUTPUT</B></TD></TR>
+<% 	build.getLog(100).each() { line -> %>
+	<TR><TD class="console">${org.apache.commons.lang.StringEscapeUtils.escapeHtml(line)}</TD></TR>
+<% 	} %>
+</TABLE>
+<BR/>
+<% } %>
+-->
+
+</BODY>
